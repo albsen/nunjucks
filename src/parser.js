@@ -35,6 +35,12 @@ var Parser = Object.extend({
             }
         }
 
+        if (tok && 
+            tok.type == lexer.BLOCK_START) {
+          console.log('in nextToken', tok);
+
+        }
+
         return tok;
     },
 
@@ -115,13 +121,19 @@ var Parser = Object.extend({
         }
 
         var tok = this.nextToken();
+        var r = /(-|[a-zA-Z])*/;
 
         if(tok && tok.type == lexer.TOKEN_BLOCK_END) {
             if(tok.value.charAt(0) === '-') {
                 this.dropLeadingWhitespace = true;
             }
-        }
-        else {
+        } else if (r.test(tok)) {
+          if (r.test(tok)) {
+            tok = this.nextToken();
+            console.log('next token', tok);
+          }
+
+        } else {
             this.fail("expected block end in " + name + " statement");
         }
     },
@@ -253,29 +265,6 @@ var Parser = Object.extend({
                                 [macroCall]);
     },
 
-    parseWithContext: function() {
-        var tok = this.peekToken();
-
-        var withContext = null;
-
-        if(this.skipSymbol('with')) {
-            withContext = true;
-        }
-        else if(this.skipSymbol('without')) {
-            withContext = false;
-        }
-
-        if(withContext !== null) {
-            if(!this.skipSymbol('context')) {
-                this.fail('parseFrom: expected context after with/without',
-                            tok.lineno,
-                            tok.colno);
-            }
-        }
-
-        return withContext;
-    },
-
     parseImport: function() {
         var importTok = this.peekToken();
         if(!this.skipSymbol('import')) {
@@ -293,15 +282,10 @@ var Parser = Object.extend({
         }
 
         var target = this.parsePrimary();
-
-        var withContext = this.parseWithContext();
-
         var node = new nodes.Import(importTok.lineno,
                                     importTok.colno,
                                     template,
-                                    target,
-                                    withContext);
-
+                                    target);
         this.advanceAfterBlockEnd(importTok.value);
 
         return node;
@@ -314,6 +298,10 @@ var Parser = Object.extend({
         }
 
         var template = this.parsePrimary();
+        var node = new nodes.FromImport(fromTok.lineno,
+                                        fromTok.colno,
+                                        template,
+                                        new nodes.NodeList());
 
         if(!this.skipSymbol('import')) {
             this.fail("parseFrom: expected import",
@@ -321,8 +309,7 @@ var Parser = Object.extend({
                             fromTok.colno);
         }
 
-        var names = new nodes.NodeList(),
-            withContext;
+        var names = node.names;
 
         while(1) {
             var nextTok = this.peekToken();
@@ -368,15 +355,9 @@ var Parser = Object.extend({
             else {
                 names.addChild(name);
             }
-
-            withContext = this.parseWithContext();
         }
 
-        return new nodes.FromImport(fromTok.lineno,
-                                    fromTok.colno,
-                                    template,
-                                    names,
-                                    withContext);
+        return node;
     },
 
     parseBlock: function() {
@@ -912,7 +893,7 @@ var Parser = Object.extend({
                 val = false;
             }
             else {
-                this.fail("invalid boolean: " + tok.value,
+                this.fail("invalid boolean: " + tok.val,
                           tok.lineno,
                           tok.colno);
             }
@@ -1146,6 +1127,8 @@ var Parser = Object.extend({
                                                                   data)]));
             }
             else if(tok.type == lexer.TOKEN_BLOCK_START) {
+                // found {% (aka BLOCK_START)
+
                 var n = this.parseStatement();
                 if(!n) {
                     break;

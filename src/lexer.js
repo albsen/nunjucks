@@ -2,6 +2,7 @@ var lib = require('./lib');
 
 var whitespaceChars = " \n\t\r";
 var delimChars = "()[]{}%*-+/#,:|.<>=!";
+var specialDelimChars = "()[]{}%*+/#,:|.<>=!";
 var intChars = "0123456789";
 
 var BLOCK_START = "{%";
@@ -164,7 +165,11 @@ Tokenizer.prototype.nextToken = function() {
         else {
             // We are not at whitespace or a delimiter, so extract the
             // text and parse it
-            tok = this._extractUntil(whitespaceChars + delimChars);
+            tok = this._extractUntil(whitespaceChars + specialDelimChars);
+            console.log('lexer else tok', tok);
+            if (tok == 'endblock') {
+              console.log('>>> found endblock'); 
+            }
 
             if(tok.match(/^[-+]?[0-9]+$/)) {
                 if(this.current() == '.') {
@@ -296,7 +301,7 @@ Tokenizer.prototype.parseString = function(delimiter) {
 };
 
 Tokenizer.prototype._matches = function(str) {
-    if(this.index + str.length > this.len) {
+    if(this.index + str.length > this.length) {
         return null;
     }
 

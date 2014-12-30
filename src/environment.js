@@ -360,24 +360,14 @@ var Template = Obj.extend({
         }.bind(this));
     },
 
-    getExported: function(ctx, frame, cb) {
-        if (typeof ctx === 'function') {
-            cb = ctx;
-            ctx = {};
-        }
-
-        if (typeof frame === 'function') {
-            cb = frame;
-            frame = null;
-        }
-
+    getExported: function(cb) {
         this.compile();
 
         // Run the rootRenderFunc to populate the context with exported vars
-        var context = new Context(ctx || {}, this.blocks);
+        var context = new Context({}, this.blocks);
         this.rootRenderFunc(this.env,
                             context,
-                            frame || new Frame(),
+                            new Frame(),
                             runtime,
                             function() {
                                 cb(null, context.getExported());
@@ -402,7 +392,6 @@ var Template = Obj.extend({
                                           this.env.extensionsList,
                                           this.path,
                                           this.env.lexerTags);
-
             var func = new Function(source);
             props = func();
         }
